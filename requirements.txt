@@ -1,0 +1,11 @@
+coverage
+cython
+-e git://github.com/sprillo/Surprise.git@243f45d815a965a4a10251172cd62c11387ac35f#egg=surprise
+matplotlib
+numpy
+pandas
+pytest
+pytest-cov
+seaborn
+scipy
+sklearn
