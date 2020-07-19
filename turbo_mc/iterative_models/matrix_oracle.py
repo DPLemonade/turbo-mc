@@ -7,7 +7,7 @@ that gives the dimension of the matrix.
 Subclasses only have to implement 'shape' and the helper method '_observe_entries'.
 """
 import numpy as np
-from typing import List, Tuple
+from typing import List, Tuple, Iterable
 
 from abc import ABC, abstractmethod
 
@@ -24,12 +24,17 @@ class MatrixOracle(ABC):
         self,
         matrix_indices: List[Tuple[int, int]]
     ) -> np.array:
-        rows, cols = zip(*matrix_indices)
-        vals = self._observe_entries(rows, cols)
         if 'X_observed' not in self.__dict__:  # TODO: This is duplicated code
-            self.X_observed = np.zeros(shape=self.shape()) + np.nan
-        self.X_observed[(rows, cols)] = vals
-        return vals
+                self.X_observed = np.zeros(shape=self.shape()) + np.nan
+        # Extract rows and cols; make them np.arrays for easier indexing.
+        rows, cols = map(np.array, zip(*matrix_indices))
+        # Exclude (row, col) pairs that were already observed (no need to re-compute them!)
+        index_not_observed = np.isnan(self.X_observed[(rows, cols)])
+        unobserved_rows, unobserved_cols = rows[index_not_observed], cols[index_not_observed]
+        # Query the unobserved entries (cast rows and cols back to List[int] to respect interface)
+        unobserved_vals = self._observe_entries(list(unobserved_rows), list(unobserved_cols))
+        self.X_observed[(unobserved_rows, unobserved_cols)] = unobserved_vals
+        return self.X_observed[(rows, cols)]
 
     @abstractmethod
     def _observe_entries(
