@@ -111,7 +111,7 @@ def get_list_of_random_matrix_indices(
     total_entries_sampled = int(nrows * ncols * sampling_density)
     total_entries_sampled_per_column = int(total_entries_sampled / ncols)
     if total_entries_sampled_per_column == 0:
-        raise ValueError(f"No entries would be sampled")
+        raise ValueError("No entries would be sampled")
     row_indices = []  # type: List[int]
     while len(row_indices) < 2 * total_entries_sampled:
         row_indices += list(np.random.choice(range(nrows), size=nrows, replace=False))
@@ -175,7 +175,7 @@ def observe_entries(
     :return res: pd.DataFrame of triples (row, col, val)
     """
     if verbose:
-        print(f"In observe_entries ... ")  # pragma: no cover
+        print("In observe_entries ... ")  # pragma: no cover
     assert(len(X.shape) == 2)
     rows, cols = zip(*matrix_indices)
     vals = X[rows, cols]
@@ -184,7 +184,7 @@ def observe_entries(
                       'col': cols,
                       'val': vals})
     if verbose:
-        print(f"Out observe_entries")  # pragma: no cover
+        print("Out observe_entries")  # pragma: no cover
     return observations
 
 
@@ -198,8 +198,8 @@ def observation_list_to_df(
     :return res: pd.DataFrame of triples (row, col, val)
     """
     # Check that observations are all distinct
-    assert(len(set([(r, c) for (r, c, _) in observations_list])) ==
-           len(observations_list))
+    assert(len(set([(r, c) for (r, c, _) in observations_list]))
+           == len(observations_list))
     observations = \
         pd.DataFrame({'row': [r for r, _, _ in observations_list],
                       'col': [c for _, c, _ in observations_list],
@@ -252,7 +252,7 @@ def complete_matrix(
     :return X_completion: Completing of X_observed based on model
     """
     if verbose:
-        print(f"In complete_matrix ... ")  # pragma: no cover
+        print("In complete_matrix ... ")  # pragma: no cover
     nrows, ncols = X_observed.shape
     X_completion = X_observed.copy()
     for r in range(nrows):
@@ -260,7 +260,7 @@ def complete_matrix(
             if pd.isna(X_completion[r, c]):
                 X_completion[r, c] = model.predict(r, c)
     if verbose:
-        print(f"Out complete_matrix")  # pragma: no cover
+        print("Out complete_matrix")  # pragma: no cover
     return X_completion
 
 

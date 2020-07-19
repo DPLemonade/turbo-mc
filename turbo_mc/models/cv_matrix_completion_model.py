@@ -28,6 +28,10 @@ def compute_spearman_r2(
         - predicted columns that are not almost equal yet ground truth is constant, have Spearman R2 0.0.
         - for all other columns, the usual Spearman R2 is computed
     """
+    assert(len(y_true) == len(y_pred))
+    # Border case 0: there are no true labels or predictions. Return 0.0 (random)
+    if len(y_true) == 0:
+        return 0.0
     # Border case 1: predictions are very close to ground truth
     if are_equal(y_true, y_pred):
         return 1.0
@@ -125,7 +129,7 @@ class KFoldCVMatrixCompletionModel(CVMatrixCompletionModel):
             X_completion_cv[out_of_fold_indices] = X_completion_fold[out_of_fold_indices]
         if self.finally_refit_model:
             if self.verbose:
-                print(f"KFoldCVMatrixCompletionModel: Refitting model on all data ...")
+                print("KFoldCVMatrixCompletionModel: Refitting model on all data ...")
             full_model = copy.deepcopy(self.finally_refit_model)
             full_model.fit_matrix(X_observed, Z)
             X_completion = full_model.predict_all()
@@ -213,7 +217,7 @@ class TrainValSplitCVMatrixCompletionModel(CVMatrixCompletionModel):
         X_train[np.where(is_train)] = X_observed[np.where(is_train)]
         # Fit model to training data.
         if self.verbose:
-            print(f"TrainValSplitCVMatrixCompletionModel: training model ...")
+            print("TrainValSplitCVMatrixCompletionModel: training model ...")
         model.fit_matrix(X_train, Z)
         # Make predictions
         X_prediction = model.predict_all()
@@ -226,7 +230,7 @@ class TrainValSplitCVMatrixCompletionModel(CVMatrixCompletionModel):
         # If finally_refit_model, do so, and upate the predictions.
         if self.finally_refit_model:
             if self.verbose:
-                print(f"TrainValSplitCVMatrixCompletionModel: Refitting model on all data ...")
+                print("TrainValSplitCVMatrixCompletionModel: Refitting model on all data ...")
             full_model = copy.deepcopy(self.finally_refit_model)
             full_model.fit_matrix(X_observed, Z)
             X_prediction = full_model.predict_all()

@@ -13,7 +13,8 @@ setup(
     install_requires=[
         'coverage',
         'cython',
-        'scikit-surprise @ git+ssh://git@github.com/sprillo/Surprise.git@deeeaf889f6e24643753cd935fbae0f612771b6e#egg=scikit-surprise',
+        'scikit-surprise @ git+ssh://git@github.com/sprillo/Surprise.git'
+        '@deeeaf889f6e24643753cd935fbae0f612771b6e#egg=scikit-surprise',
         'matplotlib',
         'numpy',
         'pandas',

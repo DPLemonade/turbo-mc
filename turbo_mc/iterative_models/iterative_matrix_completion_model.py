@@ -58,6 +58,10 @@ class IterativeMCMWithPrescribedPcts(IterativeMatrixCompletionModel):
 
     def fit(self, matrix_oracle: MatrixOracle, Z: Optional[np.array] = None):
         X_observed = matrix_oracle.observed_matrix()
+        if not np.all(np.isnan(X_observed)):
+            raise ValueError(
+                "Received a warm-started oracle, but I don't yet have logic to handle "
+                "that case smartly.")
         curr_cv_spearman_r2s = None  # type: Optional[np.array]
         for i, (sampling_density, cv_model) in enumerate(zip(self.sampling_densities, self.cv_models)):
             if self.verbose:
@@ -96,7 +100,7 @@ def smart_list_of_matrix_indices(
         X_observed: np.array,
         sampling_density: float,
         cv_spearman_r2s: np.array
-        ) -> List[Tuple[int, int]]:
+) -> List[Tuple[int, int]]:
     r"""
     Queries the bottom half of features with poorest spearman R2.
     """
@@ -188,8 +192,14 @@ class IterativeMCMWithGuaranteedSpearmanR2(IterativeMatrixCompletionModel):
                 print(f"IterativeMCMWithGuaranteedSpearmanR2: Fitting iteration {iteration} "
                       f"(Percent queried: {(iteration + 1) * sampling_density} / 1.00)")
             if iteration == 0:
-                # First round of fitting, just sample uniformly
-                matrix_indices = get_list_of_random_matrix_indices(R, C, sampling_density)
+                # First round of fitting!
+                if np.all(np.isnan(X_observed)):
+                    # Matrix is completely unobserved: just sample uniformly
+                    matrix_indices = get_list_of_random_matrix_indices(R, C, sampling_density)
+                else:
+                    # The oracle is already warm-started: we want to start by knowing what those entries are!
+                    observed_rows, observed_cols = np.where(~np.isnan(X_observed))
+                    matrix_indices = list(zip(observed_rows, observed_cols))
             else:
                 # We have CV information, use it!
                 matrix_indices =\
@@ -206,10 +216,10 @@ class IterativeMCMWithGuaranteedSpearmanR2(IterativeMatrixCompletionModel):
             curr_cv_spearman_r2s = cv_model.cv_spearman_r2s()
             _override_fully_observed_columns_sr2_to_1(curr_cv_spearman_r2s, X_observed)
             if self.plot_progress:  # pragma: no cover
-                plt.title(f"Histogram of current CV Spearman R2s")
+                plt.title("Histogram of current CV Spearman R2s")
                 plt.hist(curr_cv_spearman_r2s, bins=20)
                 plt.show()
-                plt.title(f"Histogram of observations per column")
+                plt.title("Histogram of observations per column")
                 plt.hist((~np.isnan(X_observed)).sum(axis=0), bins=20)
                 plt.show()
             if np.sort(curr_cv_spearman_r2s)[int(C * (1.0 - self.min_pct_meet_sr2_requirement))] >=\
@@ -277,7 +287,7 @@ def _choose_entries_from_underperforming_columns(
         sampling_density: float,
         cv_spearman_r2s: np.array,
         requested_cv_spearman_r2: float
-        ) -> List[Tuple[int, int]]:
+) -> List[Tuple[int, int]]:
     r"""
     Distributes budget evenly amoung all columns whose spearman R2 is below the
     requested threshold. Any remaining budget is distributed among the remaining

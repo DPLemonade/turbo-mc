@@ -9,15 +9,15 @@ def test_compute_spearman_r2s():
     nan = np.nan
     spearman_r2s = compute_spearman_r2s(
         X_true=np.array(
-            [[1, nan, 3, 3, 3, 3],
-             [nan, 5, 3, 6, 3, 6],
-             [7, 8, nan, nan, nan, nan]]),
+            [[1, nan, 3, 3, 3, 3, nan],
+             [nan, 5, 3, 6, 3, 6, nan],
+             [7, 8, nan, nan, nan, nan, nan]]),
         X_pred=np.array(
-            [[2, nan, 3, 3, 3, 3],
-             [nan, 9, 3, 6, 6, 3],
-             [6, 8, nan, nan, nan, nan]])
+            [[2, nan, 3, 3, 3, 3, nan],
+             [nan, 9, 3, 6, 6, 3, nan],
+             [6, 8, nan, nan, nan, nan, nan]])
     )
-    expected_spearman_r2s = np.array([1., -1., 1., 1., 0., 0.])
+    expected_spearman_r2s = np.array([1., -1., 1., 1., 0., 0., 0.])
     np.testing.assert_almost_equal(spearman_r2s, expected_spearman_r2s)
 
 
