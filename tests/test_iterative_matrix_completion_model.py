@@ -432,6 +432,59 @@ def test_IterativeMCMWithGuaranteedSpearmanR2__large(finally_refit_model):
     assert(set(best_spearman_r2s) == set([C // 2, C // 3, C // 4, C // 5]))
 
 
+def test_IterativeMCMWithGuaranteedSpearmanR2__large_warmstarting():
+    r"""
+    We create a random low rank matrix where four columns are random. Those four columns should
+    all be queried fully by the model! The oracle is also heavily warmstarstarted, which
+    is why this is a fast test!: If the sampling_density used for the matrix_oracle
+    is reduced to e.g. 0.01 this test takes longer to run (as expected).
+    """
+    k_true = 1
+    R = 100
+    C = 37
+    np.random.seed(1)
+    U = np.random.normal(size=(R, k_true))
+    V = np.random.normal(size=(C, k_true))
+    X_true = U @ V.T
+    X_true[:, C // 2] = np.random.normal(size=(R))  # Make this column random.
+    X_true[:, C // 3] = np.random.normal(size=(R))  # Make this column random.
+    X_true[:, C // 4] = np.random.normal(size=(R))  # Make this column random.
+    X_true[:, C // 5] = np.random.normal(size=(R))  # Make this column random.
+    matrix_oracle = WarmstartedOracleWithAPrescribedMatrix(
+        X_true, get_list_of_random_matrix_indices(R, C, sampling_density=0.75))
+    requested_cv_spearman_r2 = 0.7
+    iterative_model = IterativeMCMWithGuaranteedSpearmanR2(
+        cv_model=KFoldCVMatrixCompletionModel(
+            model=MatrixCompletionFastALS(
+                n_factors=1,
+                lam=0.0,
+                n_epochs=100,
+                verbose=False),
+            n_folds=5,
+            finally_refit_model=None),
+        requested_cv_spearman_r2=requested_cv_spearman_r2,
+        sampling_density=0.01,
+        finally_refit_model=MatrixCompletionFastALS(
+            n_factors=1,
+            lam=0.0,
+            n_epochs=100,
+            verbose=False),
+        verbose=True
+    )
+    iterative_model.fit(matrix_oracle)
+    X_observed = iterative_model.observed_matrix()
+    observations_per_column = (~np.isnan(X_observed)).sum(axis=0)
+    print(f"observations_per_column = {observations_per_column}")
+    top_queried_columns = np.argsort(observations_per_column)[-4:]
+    assert(set(top_queried_columns) == set([C // 2, C // 3, C // 4, C // 5]))
+    iterative_model.predict_all()
+    iterative_model.impute_all()
+    cv_spearman_r2s = iterative_model.cv_spearman_r2s()
+    assert(min(cv_spearman_r2s) > requested_cv_spearman_r2)
+    best_spearman_r2s = np.argsort(cv_spearman_r2s)[-4:]
+    assert(set(best_spearman_r2s) == set([C // 2, C // 3, C // 4, C // 5]))
+
+
 @pytest.mark.parametrize(
     "cv_model,finally_refit_model",
     itertools.product(
