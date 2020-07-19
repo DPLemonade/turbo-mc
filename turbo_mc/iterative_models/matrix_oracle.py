@@ -51,6 +51,22 @@ class MatrixOracle(ABC):
             self.X_observed = np.zeros(shape=self.shape()) + np.nan
         return self.X_observed
 
+    def _add_observations(
+        self,
+        rows: List[int],
+        cols: List[int],
+        vals: List[float]
+    ) -> None:
+        r"""
+        Method that subclasses can call to add observations to the matrix.
+        Handy for e.g. warm-starting an oracle upon __init__().
+        """
+        assert(len(rows) == len(cols))
+        assert(len(rows) == len(vals))
+        if 'X_observed' not in self.__dict__:  # TODO: This is duplicated code
+            self.X_observed = np.zeros(shape=self.shape()) + np.nan
+        self.X_observed[(rows, cols)] = vals
+
 
 class OracleWithAPrescribedMatrix(MatrixOracle):
     def __init__(self, X: np.array):
@@ -67,16 +83,23 @@ class OracleWithAPrescribedMatrix(MatrixOracle):
         return self.X[(rows, cols)]
 
 
-class CompassOracle(MatrixOracle):
-    def __init__(self):
-        raise NotImplementedError
+class WarmstartedOracleWithAPrescribedMatrix(MatrixOracle):
+    def __init__(
+        self,
+        X: np.array,
+        warm_started_indices: List[Tuple[int, int]]
+    ):
+        self.X = X
+        rows, cols = zip(*warm_started_indices)
+        vals = X[(rows, cols)]
+        self._add_observations(rows, cols, vals)
 
     def shape(self) -> Tuple[int, int]:
-        raise NotImplementedError
+        return self.X.shape
 
     def _observe_entries(
         self,
         rows: List[int],
         cols: List[int]
     ) -> np.array:
-        raise NotImplementedError
+        return self.X[(rows, cols)]
