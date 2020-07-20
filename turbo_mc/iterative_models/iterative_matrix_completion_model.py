@@ -189,7 +189,7 @@ class IterativeMCMWithGuaranteedSpearmanR2(IterativeMatrixCompletionModel):
                         C=C,
                         sampled_density=sampling_density * (iteration + 1)))
             if self.verbose:
-                print('*' * 10 + f" IterativeMCMWithGuaranteedSpearmanR2: Fitting iteration {iteration} "
+                print('*' * 10 + f" IterativeMCMWithGuaranteedSpearmanR2: Fitting iteration {iteration + 1} "
                       f"(Percent queried: {(iteration + 1) * sampling_density} / 1.00) " + '*' * 10)
             if iteration == 0:
                 # First round of fitting!
@@ -256,7 +256,7 @@ class IterativeMCMWithGuaranteedSpearmanR2(IterativeMatrixCompletionModel):
         if self.verbose:
             sampling_density = (~np.isnan(X_observed)).mean()
             print(f"IterativeMCMWithGuaranteedSpearmanR2: Finished fitting. "
-                  f"Number of iterations used: {iteration}; "
+                  f"Number of iterations used: {iteration + 1}; "
                   f"Final sampling density: {sampling_density} ")
 
     def predict_all(self) -> np.array:
