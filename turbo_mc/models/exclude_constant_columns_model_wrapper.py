@@ -26,10 +26,11 @@ class ExcludeConstantColumnsModelWrapper(MatrixCompletionModel):
             X_observed: np.array,
             Z: None = None) -> None:
         if turbo_mc.utils.TIMEIT:  # For profiling
-            print(f"\tExcludeConstantColumnsModelWrapper::_fit_matrix_init ...")  # For profiling
+            print("\tExcludeConstantColumnsModelWrapper::_fit_matrix_init ...")  # For profiling
             time_start = time.time()  # For profiling
         self.nrows, self.ncols = X_observed.shape
         self.column_means = np.nanmean(X_observed, axis=0)
+        self.column_means[np.isnan(self.column_means)] = 0.0  # Deals with empty columns
         self.nonconstant_column_indices = get_nonconstant_columns(X_observed)
         self.is_nonconstant_column_index = [False] * self.ncols
         for idx in self.nonconstant_column_indices:
@@ -45,7 +46,7 @@ class ExcludeConstantColumnsModelWrapper(MatrixCompletionModel):
             X_observed_subset = X_observed[:, self.nonconstant_column_indices]
             if turbo_mc.utils.TIMEIT:  # For profiling
                 time_tot = time.time() - time_start  # For profiling
-                print(f"\tExcludeConstantColumnsModelWrapper::_fit_matrix_init, time = %.2f"
+                print("\tExcludeConstantColumnsModelWrapper::_fit_matrix_init, time = %.2f"
                       % time_tot)  # For profiling
             self.model._fit_matrix_init(X_observed_subset, Z=Z)
 

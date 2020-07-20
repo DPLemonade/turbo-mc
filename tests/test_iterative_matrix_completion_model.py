@@ -8,8 +8,10 @@ from turbo_mc.iterative_models.iterative_matrix_completion_model import Iterativ
 from turbo_mc.iterative_models.matrix_oracle import OracleWithAPrescribedMatrix,\
     WarmstartedOracleWithAPrescribedMatrix
 from turbo_mc.matrix_manipulation import get_list_of_random_matrix_indices
+from turbo_mc.models.column_normalizer_model_wrapper import ColumnNormalizerModelWrapper
 from turbo_mc.models.cv_matrix_completion_model import KFoldCVMatrixCompletionModel,\
     TrainValSplitCVMatrixCompletionModel
+from turbo_mc.models.exclude_constant_columns_model_wrapper import ExcludeConstantColumnsModelWrapper
 from turbo_mc.models.matrix_completion_fast_als import MatrixCompletionFastALS
 np.set_printoptions(precision=2, suppress=True)
 
@@ -543,3 +545,132 @@ def test_IterativeMCMWithGuaranteedSpearmanR2__callables(cv_model, finally_refit
     iterative_model.observed_matrix()
     iterative_model.predict_all()
     iterative_model.cv_spearman_r2s()
+
+
+@pytest.mark.parametrize(
+    "cv_model",
+    [lambda state:
+        TrainValSplitCVMatrixCompletionModel(
+            ExcludeConstantColumnsModelWrapper(
+                ColumnNormalizerModelWrapper(
+                    MatrixCompletionFastALS(
+                        n_factors=int(min(state.R, state.C) * state.sampled_density * 0.5),
+                        lam=10.0,
+                        n_epochs=100,
+                        verbose=False))),
+            train_ratio=0.8,
+            verbose=True,
+            finally_refit_model=None),
+     lambda state:
+        KFoldCVMatrixCompletionModel(
+            ExcludeConstantColumnsModelWrapper(
+                ColumnNormalizerModelWrapper(
+                    MatrixCompletionFastALS(
+                        n_factors=int(min(state.R, state.C) * state.sampled_density * 0.5),
+                        lam=10.0,
+                        n_epochs=100,
+                        verbose=False))),
+            n_folds=5,
+            verbose=True,
+            finally_refit_model=None),
+     lambda state:
+        TrainValSplitCVMatrixCompletionModel(
+            ColumnNormalizerModelWrapper(
+                MatrixCompletionFastALS(
+                    n_factors=int(min(state.R, state.C) * state.sampled_density * 0.5),
+                    lam=10.0,
+                    n_epochs=100,
+                    verbose=False)),
+            train_ratio=0.8,
+            verbose=True,
+            finally_refit_model=None),
+     lambda state:
+        KFoldCVMatrixCompletionModel(
+            ColumnNormalizerModelWrapper(
+                MatrixCompletionFastALS(
+                    n_factors=int(min(state.R, state.C) * state.sampled_density * 0.5),
+                    lam=10.0,
+                    n_epochs=100,
+                    verbose=False)),
+            n_folds=5,
+            verbose=True,
+            finally_refit_model=None),
+     lambda state:
+        TrainValSplitCVMatrixCompletionModel(
+            ExcludeConstantColumnsModelWrapper(
+                MatrixCompletionFastALS(
+                    n_factors=int(min(state.R, state.C) * state.sampled_density * 0.5),
+                    lam=10.0,
+                    n_epochs=100,
+                    verbose=False)),
+            train_ratio=0.8,
+            verbose=True,
+            finally_refit_model=None),
+     lambda state:
+        KFoldCVMatrixCompletionModel(
+            ExcludeConstantColumnsModelWrapper(
+                MatrixCompletionFastALS(
+                    n_factors=int(min(state.R, state.C) * state.sampled_density * 0.5),
+                    lam=10.0,
+                    n_epochs=100,
+                    verbose=False)),
+            n_folds=5,
+            verbose=True,
+            finally_refit_model=None),
+     lambda state:
+        TrainValSplitCVMatrixCompletionModel(
+            ColumnNormalizerModelWrapper(
+                ExcludeConstantColumnsModelWrapper(
+                    MatrixCompletionFastALS(
+                        n_factors=int(min(state.R, state.C) * state.sampled_density * 0.5),
+                        lam=10.0,
+                        n_epochs=100,
+                        verbose=False))),
+            train_ratio=0.8,
+            verbose=True,
+            finally_refit_model=None),
+     lambda state:
+        KFoldCVMatrixCompletionModel(
+            ColumnNormalizerModelWrapper(
+                ExcludeConstantColumnsModelWrapper(
+                    MatrixCompletionFastALS(
+                        n_factors=int(min(state.R, state.C) * state.sampled_density * 0.5),
+                        lam=10.0,
+                        n_epochs=100,
+                        verbose=False))),
+            n_folds=5,
+            verbose=True,
+            finally_refit_model=None)]
+)
+def test_integration_with_normalization_and_exclusion_wrappers(cv_model):
+    r"""
+    When fitting on a 2 x C matrix, things blew up for me in Compass.
+    It would be good to be able to run successfully on a 2 x C matrix for Compass tests!
+    This test case debugs the issue and stands as a regression test.
+    """
+    X = np.array([[0., 1., 2., 3.], [4., 3., 2., 1.]])
+    compass_matrix_oracle = OracleWithAPrescribedMatrix(X)
+    requested_cv_spearman_r2 = 0.7
+    increments = 0.5
+    min_pct_meet_sr2_requirement = 0.99
+    model =\
+        IterativeMCMWithGuaranteedSpearmanR2(
+            cv_model=cv_model,
+            requested_cv_spearman_r2=requested_cv_spearman_r2,
+            sampling_density=increments,
+            finally_refit_model=lambda state:
+                ExcludeConstantColumnsModelWrapper(
+                    ColumnNormalizerModelWrapper(
+                        MatrixCompletionFastALS(
+                            n_factors=int(min(state.R, state.C) * state.sampled_density * 0.5),
+                            lam=10.0,
+                            n_epochs=300,
+                            verbose=False))),
+            min_pct_meet_sr2_requirement=min_pct_meet_sr2_requirement,
+            verbose=True,
+            plot_progress=False,
+        )
+
+    # Fit iterative model. This is the core procedure of Turbo Compass (here is where all the magic happens)
+    np.random.seed(1)
+    model.fit(compass_matrix_oracle)

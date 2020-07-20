@@ -189,8 +189,8 @@ class IterativeMCMWithGuaranteedSpearmanR2(IterativeMatrixCompletionModel):
                         C=C,
                         sampled_density=sampling_density * (iteration + 1)))
             if self.verbose:
-                print(f"IterativeMCMWithGuaranteedSpearmanR2: Fitting iteration {iteration} "
-                      f"(Percent queried: {(iteration + 1) * sampling_density} / 1.00)")
+                print('*' * 10 + f" IterativeMCMWithGuaranteedSpearmanR2: Fitting iteration {iteration} "
+                      f"(Percent queried: {(iteration + 1) * sampling_density} / 1.00) " + '*' * 10)
             if iteration == 0:
                 # First round of fitting!
                 if np.all(np.isnan(X_observed)):
@@ -215,6 +215,9 @@ class IterativeMCMWithGuaranteedSpearmanR2(IterativeMatrixCompletionModel):
             # Recompute CV Spearman R2s
             curr_cv_spearman_r2s = cv_model.cv_spearman_r2s()
             _override_fully_observed_columns_sr2_to_1(curr_cv_spearman_r2s, X_observed)
+            worse_cv_spearman_r2 = np.sort(curr_cv_spearman_r2s)[int(C * (1.0 - self.min_pct_meet_sr2_requirement))]
+            print(f"Worse CV Spearman R2 / Requested Spearman R2: "
+                  f"{worse_cv_spearman_r2} / {self.requested_cv_spearman_r2}")
             if self.plot_progress:  # pragma: no cover
                 plt.title("Histogram of current CV Spearman R2s")
                 plt.hist(curr_cv_spearman_r2s, bins=20)
@@ -222,8 +225,7 @@ class IterativeMCMWithGuaranteedSpearmanR2(IterativeMatrixCompletionModel):
                 plt.title("Histogram of observations per column")
                 plt.hist((~np.isnan(X_observed)).sum(axis=0), bins=20)
                 plt.show()
-            if np.sort(curr_cv_spearman_r2s)[int(C * (1.0 - self.min_pct_meet_sr2_requirement))] >=\
-                    self.requested_cv_spearman_r2:
+            if worse_cv_spearman_r2 >= self.requested_cv_spearman_r2:
                 if self.verbose:
                     print(f"IterativeMCMWithGuaranteedSpearmanR2: Achieved goal of "
                           f"{self.min_pct_meet_sr2_requirement}% CV Spearman R2 >= {self.requested_cv_spearman_r2}!")

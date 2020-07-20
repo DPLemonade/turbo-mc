@@ -94,10 +94,10 @@ class MatrixCompletionModel(ABC):
         :param X_observed: Observed matrix. Unobserved entries have np.nan.
         """
         if verbose:
-            print(f"In impute_all ... ")  # pragma: no cover
+            print("In impute_all ... ")  # pragma: no cover
         unobserved_indices = np.where(np.isnan(X_observed))
         X_completion = X_observed.copy()
         X_completion[unobserved_indices] = self.predict_all()[unobserved_indices]
         if verbose:
-            print(f"Out impute_all")  # pragma: no cover
+            print("Out impute_all")  # pragma: no cover
         return X_completion

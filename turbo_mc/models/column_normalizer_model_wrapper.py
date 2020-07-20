@@ -20,14 +20,16 @@ class ColumnNormalizerModelWrapper(MatrixCompletionModel):
             X_observed: np.array,
             Z: None = None) -> None:
         if turbo_mc.utils.TIMEIT:  # For profiling
-            print(f"\t\tColumnNormalizerModelWrapper::_fit_matrix_init ...")  # For profiling
+            print("\t\tColumnNormalizerModelWrapper::_fit_matrix_init ...")  # For profiling
             time_start = time.time()  # For profiling
         self.column_stds = np.nanstd(X_observed, axis=0)
+        self.column_stds[np.isnan(self.column_stds)] = 1.0  # Deals with empty columns
         self.column_means = np.nanmean(X_observed, axis=0)
+        self.column_means[np.isnan(self.column_means)] = 0.0  # Deals with empty columns
         X_observed_normalized = (X_observed - self.column_means) / (self.column_stds + 1e-16)
         if turbo_mc.utils.TIMEIT:  # For profiling
             time_tot = time.time() - time_start  # For profiling
-            print(f"\t\tColumnNormalizerModelWrapper::_fit_matrix_init, time = %.2f" % time_tot)  # For profiling
+            print("\t\tColumnNormalizerModelWrapper::_fit_matrix_init, time = %.2f" % time_tot)  # For profiling
         self.model._fit_matrix_init(X_observed_normalized, Z)
 
     def _step(self):
