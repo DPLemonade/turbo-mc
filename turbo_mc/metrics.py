@@ -108,7 +108,7 @@ def compute_pearson_r2(
     pearson_r2 = np.corrcoef(y_true[indices_to_use], y_pred[indices_to_use])[0, 1]
     # Paranoid check so this doesn't ruin my day. TODO: See if this ever hits.
     if np.isnan(pearson_r2):
-        print("WARNING: np.corrcoef returned np.nan")
+        # print("WARNING: np.corrcoef returned np.nan")
         return 0.0
     return pearson_r2
 
@@ -175,7 +175,7 @@ def compute_spearman_r2(
     spearman_r2 = scipy.stats.spearmanr(y_true_sub, y_pred_sub).correlation
     # Even then, sometimes spearman_r2 can return np.nan :( Not sure why
     if np.isnan(spearman_r2):
-        print("WARNING: scipy.stats.spearmanr returned np.nan")
+        # print("WARNING: scipy.stats.spearmanr returned np.nan")
         return 0.0
     return spearman_r2
 

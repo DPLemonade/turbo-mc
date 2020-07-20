@@ -48,7 +48,7 @@ def compute_spearman_r2(
     spearman_r2 = scipy.stats.spearmanr(y_true, y_pred).correlation
     # Even then, sometimes spearman_r2 can return np.nan :( Not sure why
     if np.isnan(spearman_r2):  # pragma: no cover
-        print("WARNING: scipy.stats.spearmanr returned np.nan")
+        # print("WARNING: scipy.stats.spearmanr returned np.nan")
         return 0.0
     return spearman_r2
 
