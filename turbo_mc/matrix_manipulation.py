@@ -73,7 +73,7 @@ def get_list_of_random_matrix_indices_fast(
         nrows: int,
         ncols: int,
         sampling_density: float = 0.1,
-        verbose: bool = True) \
+        verbose: bool = False) \
         -> List[Tuple[int, int]]:
     r"""
     Return a random set of indices indexing a matrix of size nrows X ncols.
@@ -94,7 +94,7 @@ def get_list_of_random_matrix_indices(
         nrows: int,
         ncols: int,
         sampling_density: float = 0.1,
-        verbose: bool = True,
+        verbose: bool = False,
         randomize_rows_and_columns: bool = False) \
         -> List[Tuple[int, int]]:
     r"""
