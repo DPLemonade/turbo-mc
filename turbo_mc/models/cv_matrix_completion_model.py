@@ -8,14 +8,35 @@ MatrixCompletionModel. Said model is fit once for each fold. Out-of fold
 predictions are computed and used to compute out-of-fold Spearman R2 for
 each feature (column).
 """
+import sys
+import time
 from abc import ABC, abstractmethod
 import copy
+import logging
 import numpy as np
 import scipy.stats
 from typing import Optional
 
 from turbo_mc.metrics import are_equal, is_constant
 from turbo_mc.models.matrix_completion_model import MatrixCompletionModel
+
+# Logger for KFoldCVMatrixCompletionModel
+logger = logging.getLogger(__name__ + ".KFoldCVMatrixCompletionModel")
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter("%(levelname)s %(lineno)s KFoldCVMatrixCompletionModel: %(message)s")
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger = None
+
+# Logger for TrainValSplitCVMatrixCompletionModel
+logger = logging.getLogger(__name__ + ".TrainValSplitCVMatrixCompletionModel")
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter("%(levelname)s %(lineno)s CVMatrixCompletionModel: %(message)s")
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger = None
 
 
 def compute_spearman_r2(
@@ -105,8 +126,10 @@ class KFoldCVMatrixCompletionModel(CVMatrixCompletionModel):
         self.n_folds = n_folds
         self.verbose = verbose
         self.finally_refit_model = copy.deepcopy(finally_refit_model)
+        self.logger = logging.getLogger(__name__ + ".KFoldCVMatrixCompletionModel")
 
     def fit_matrix(self, X_observed: np.array, Z: Optional[np.array] = None):
+        start_time = time.time()
         X_completion = np.zeros_like(X_observed)
         X_completion_cv = np.zeros_like(X_observed) + np.nan
         n_folds = self.n_folds
@@ -117,8 +140,7 @@ class KFoldCVMatrixCompletionModel(CVMatrixCompletionModel):
         X_fold_numbers = np.random.randint(low=0, high=n_folds, size=X_observed.shape)
         X_fold_numbers[np.where(np.isnan(X_observed))] = -1
         for fold_number in range(n_folds):
-            if self.verbose:
-                print(f"KFoldCVMatrixCompletionModel: Fitting fold {fold_number} ...")
+            self.logger.info(f"Fitting fold {fold_number + 1} ...")
             model_fold = copy.deepcopy(self.model)
             X_observed_fold = np.copy(X_observed)
             X_observed_fold[np.where(X_fold_numbers == fold_number)] = np.nan
@@ -128,8 +150,7 @@ class KFoldCVMatrixCompletionModel(CVMatrixCompletionModel):
             out_of_fold_indices = np.where(X_fold_numbers == fold_number)
             X_completion_cv[out_of_fold_indices] = X_completion_fold[out_of_fold_indices]
         if self.finally_refit_model:
-            if self.verbose:
-                print("KFoldCVMatrixCompletionModel: Refitting model on all data ...")
+            self.logger.info("Refitting model on all data ...")
             full_model = copy.deepcopy(self.finally_refit_model)
             full_model.fit_matrix(X_observed, Z)
             X_completion = full_model.predict_all()
@@ -138,6 +159,7 @@ class KFoldCVMatrixCompletionModel(CVMatrixCompletionModel):
         self.X_completion_cv = X_completion_cv
         self.X_fold_numbers = X_fold_numbers
         self.X_observed = X_observed
+        self.logger.info("Finished fitting CV model! Total time: %.0fs" % (time.time() - start_time))
 
     def predict(self, r: int, c: int) -> float:
         return self.X_completion[r, c]
@@ -194,8 +216,10 @@ class TrainValSplitCVMatrixCompletionModel(CVMatrixCompletionModel):
         self.train_ratio = train_ratio
         self.verbose = verbose
         self.finally_refit_model = copy.deepcopy(finally_refit_model)
+        self.logger = logging.getLogger(__name__ + ".TrainValSplitCVMatrixCompletionModel")
 
     def fit_matrix(self, X_observed: np.array, Z: Optional[np.array] = None):
+        start_time = time.time()
         train_ratio = self.train_ratio
         model = self.model
         R, C = X_observed.shape
@@ -216,8 +240,7 @@ class TrainValSplitCVMatrixCompletionModel(CVMatrixCompletionModel):
         X_train = X_observed.copy() + np.nan
         X_train[np.where(is_train)] = X_observed[np.where(is_train)]
         # Fit model to training data.
-        if self.verbose:
-            print("TrainValSplitCVMatrixCompletionModel: training model ...")
+        self.logger.info("Training model ...")
         model.fit_matrix(X_train, Z)
         # Make predictions
         X_prediction = model.predict_all()
@@ -229,8 +252,7 @@ class TrainValSplitCVMatrixCompletionModel(CVMatrixCompletionModel):
         X_valid[is_valid] = X_observed[is_valid]
         # If finally_refit_model, do so, and upate the predictions.
         if self.finally_refit_model:
-            if self.verbose:
-                print("TrainValSplitCVMatrixCompletionModel: Refitting model on all data ...")
+            self.logger.info("Refitting model on all data ...")
             full_model = copy.deepcopy(self.finally_refit_model)
             full_model.fit_matrix(X_observed, Z)
             X_prediction = full_model.predict_all()
@@ -238,6 +260,7 @@ class TrainValSplitCVMatrixCompletionModel(CVMatrixCompletionModel):
         self.X_prediction = X_prediction
         self.X_valid = X_valid
         self.X_valid_pred = X_valid_pred
+        self.logger.info("Finished fitting CV model! Total time: %.0fs" % (time.time() - start_time))
 
     def predict(self, r: int, c: int) -> float:
         return self.X_prediction[r, c]

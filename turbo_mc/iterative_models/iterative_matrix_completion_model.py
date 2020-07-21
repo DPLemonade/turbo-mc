@@ -1,6 +1,9 @@
+import sys
+import time
 from abc import ABC, abstractmethod
 import copy
 from dataclasses import dataclass
+import logging
 import matplotlib.pyplot as plt
 import numpy as np
 from typing import List, Optional, Tuple, Union, Callable
@@ -9,6 +12,15 @@ from turbo_mc.iterative_models.matrix_oracle import MatrixOracle
 from turbo_mc.models.matrix_completion_model import MatrixCompletionModel
 from turbo_mc.models.cv_matrix_completion_model import CVMatrixCompletionModel
 from turbo_mc.matrix_manipulation import get_list_of_random_matrix_indices
+
+# Logger for IterativeMCMWithGuaranteedSpearmanR2
+logger = logging.getLogger(__name__ + ".IterativeMCMWithGuaranteedSpearmanR2")
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter("%(levelname)s %(lineno)s IterativeMCMWithGuaranteedSpearmanR2: %(message)s")
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger = None
 
 
 class IterativeMatrixCompletionModel(ABC):  # pragma: no cover
@@ -175,22 +187,23 @@ class IterativeMCMWithGuaranteedSpearmanR2(IterativeMatrixCompletionModel):
         self.verbose = verbose
         self.plot_progress = plot_progress
         self.max_iterations = max_iterations
+        self.logger = logging.getLogger(__name__ + ".IterativeMCMWithGuaranteedSpearmanR2")
 
     def fit(self, matrix_oracle: MatrixOracle, Z: Optional[np.array] = None):
+        fit_start_time = time.time()
         R, C = matrix_oracle.shape()
         sampling_density = self.sampling_density
         X_observed = matrix_oracle.observed_matrix()
         curr_cv_spearman_r2s = None  # type: Optional[np.array]
         for iteration in range(self.max_iterations):
+            iteration_start_time = time.time()
+            self.logger.info('*' * 8 + f" Iteration {iteration + 1} " + '*' * 8)
             cv_model =\
                 self.cv_model_func(
                     IterativeMCMState(
                         R=R,
                         C=C,
                         sampled_density=sampling_density * (iteration + 1)))
-            if self.verbose:
-                print('*' * 10 + f" IterativeMCMWithGuaranteedSpearmanR2: Fitting iteration {iteration + 1} "
-                      f"(Percent queried: {(iteration + 1) * sampling_density} / 1.00) " + '*' * 10)
             if iteration == 0:
                 # First round of fitting!
                 if np.all(np.isnan(X_observed)):
@@ -208,16 +221,21 @@ class IterativeMCMWithGuaranteedSpearmanR2(IterativeMatrixCompletionModel):
                         sampling_density,
                         curr_cv_spearman_r2s,
                         self.requested_cv_spearman_r2)
+            self.logger.info("Querying MatrixOracle ...")
             matrix_oracle.observe_entries(matrix_indices)
             X_observed = matrix_oracle.observed_matrix()
             # Fit cv_model
+            pct_observed_so_far = (~np.isnan(X_observed)).mean()
+            self.logger.info("Percent of matrix observed so far: %.3f/1.00" % pct_observed_so_far)
+            self.logger.info("Fitting CVMatrixCompletionModel ...")
             cv_model.fit_matrix(X_observed, Z)
             # Recompute CV Spearman R2s
             curr_cv_spearman_r2s = cv_model.cv_spearman_r2s()
             _override_fully_observed_columns_sr2_to_1(curr_cv_spearman_r2s, X_observed)
             worse_cv_spearman_r2 = np.sort(curr_cv_spearman_r2s)[int(C * (1.0 - self.min_pct_meet_sr2_requirement))]
-            print(f"Worse CV Spearman R2 / Requested Spearman R2: "
-                  f"{worse_cv_spearman_r2} / {self.requested_cv_spearman_r2}")
+            self.logger.info(
+                "Worse vs Requested CV Spearman R2 = %.3f vs. %.3f"
+                % (worse_cv_spearman_r2, self.requested_cv_spearman_r2))
             if self.plot_progress:  # pragma: no cover
                 plt.title("Histogram of current CV Spearman R2s")
                 plt.hist(curr_cv_spearman_r2s, bins=20)
@@ -225,10 +243,12 @@ class IterativeMCMWithGuaranteedSpearmanR2(IterativeMatrixCompletionModel):
                 plt.title("Histogram of observations per column")
                 plt.hist((~np.isnan(X_observed)).sum(axis=0), bins=20)
                 plt.show()
+            self.logger.info("Iteration finished! Time: %.0fs" % (time.time() - iteration_start_time))
             if worse_cv_spearman_r2 >= self.requested_cv_spearman_r2:
                 if self.verbose:
-                    print(f"IterativeMCMWithGuaranteedSpearmanR2: Achieved goal of "
-                          f"{self.min_pct_meet_sr2_requirement}% CV Spearman R2 >= {self.requested_cv_spearman_r2}!")
+                    self.logger.info(
+                        "Achieved goal of %.3f CV Spearman R2 >= %.3f!"
+                        % (self.min_pct_meet_sr2_requirement, self.requested_cv_spearman_r2))
                 break
         # The reported cv_spearman_r2s are the ones of the last CV model.
         self.curr_cv_spearman_r2s = curr_cv_spearman_r2s
@@ -237,9 +257,9 @@ class IterativeMCMWithGuaranteedSpearmanR2(IterativeMatrixCompletionModel):
         # Refit one final large model if requested.
         if self.finally_refit_model_func is not None:
             if callable(self.finally_refit_model_func):
-                if self.verbose:
-                    print(f"Will refit final model on ({R}, {C}) matrix after {sampling_density * (iteration + 1)} "
-                          f"sampled density")
+                self.logger.info(
+                    f"Refitting final model on ({R}, {C}) matrix after observing "
+                    + "%.3f/1.00 pct of entries ..." % (sampling_density * (iteration + 1)))
                 final_model =\
                     self.finally_refit_model_func(
                         IterativeMCMState(
@@ -247,17 +267,18 @@ class IterativeMCMWithGuaranteedSpearmanR2(IterativeMatrixCompletionModel):
                             C=C,
                             sampled_density=sampling_density * (iteration + 1)))
             else:
+                self.logger.info("Not refitting any model at the very end.")
                 final_model = copy.deepcopy(self.finally_refit_model_func)
             final_model.fit_matrix(X_observed, Z)
         else:
             final_model = cv_model
         self.X_predicted = final_model.predict_all()
-        # Some reporting.
-        if self.verbose:
-            sampling_density = (~np.isnan(X_observed)).mean()
-            print(f"IterativeMCMWithGuaranteedSpearmanR2: Finished fitting. "
-                  f"Number of iterations used: {iteration + 1}; "
-                  f"Final sampling density: {sampling_density} ")
+        pct_observed = (~np.isnan(X_observed)).mean()
+        self.logger.info(
+            f"Finished iterative fitting! "
+            f"Number of iterations used: {iteration + 1}; "
+            + "Pct of matrix sampled: %.3f/1.00; " % pct_observed
+            + "Total time: %.0fs" % (time.time() - fit_start_time))
 
     def predict_all(self) -> np.array:
         r"""
