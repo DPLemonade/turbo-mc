@@ -234,8 +234,9 @@ class IterativeMCMWithGuaranteedSpearmanR2(IterativeMatrixCompletionModel):
             _override_fully_observed_columns_sr2_to_1(curr_cv_spearman_r2s, X_observed)
             worse_cv_spearman_r2 = np.sort(curr_cv_spearman_r2s)[int(C * (1.0 - self.min_pct_meet_sr2_requirement))]
             self.logger.info(
-                "Worse vs Mean vs Requested CV Spearman R2 = %.3f vs. %.3f vs %.3f"
-                % (worse_cv_spearman_r2, curr_cv_spearman_r2s.mean(), self.requested_cv_spearman_r2))
+                "Worse@%.2f vs Mean vs Requested CV Spearman R2 = %.3f vs. %.3f vs %.3f"
+                % (self.min_pct_meet_sr2_requirement, worse_cv_spearman_r2, curr_cv_spearman_r2s.mean(),
+                   self.requested_cv_spearman_r2))
             if self.plot_progress:  # pragma: no cover
                 plt.title("Histogram of current CV Spearman R2s")
                 plt.hist(curr_cv_spearman_r2s, bins=20)
