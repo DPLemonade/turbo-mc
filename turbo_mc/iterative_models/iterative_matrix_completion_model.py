@@ -232,7 +232,8 @@ class IterativeMCMWithGuaranteedSpearmanR2(IterativeMatrixCompletionModel):
             # Recompute CV Spearman R2s
             curr_cv_spearman_r2s = cv_model.cv_spearman_r2s()
             _override_fully_observed_columns_sr2_to_1(curr_cv_spearman_r2s, X_observed)
-            worse_cv_spearman_r2 = np.sort(curr_cv_spearman_r2s)[int(C * (1.0 - self.min_pct_meet_sr2_requirement))]
+            worse_cv_spearman_r2 = np.sort(curr_cv_spearman_r2s)[
+                min(int(C * (1.0 - self.min_pct_meet_sr2_requirement)), C - 1)]
             self.logger.info(
                 "Worse@%.2f vs Mean vs Requested CV Spearman R2 = %.3f vs. %.3f vs %.3f"
                 % (self.min_pct_meet_sr2_requirement, worse_cv_spearman_r2, curr_cv_spearman_r2s.mean(),
