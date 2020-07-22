@@ -16,7 +16,7 @@ from turbo_mc.matrix_manipulation import get_list_of_random_matrix_indices
 # Logger for IterativeMCMWithGuaranteedSpearmanR2
 logger = logging.getLogger(__name__ + ".IterativeMCMWithGuaranteedSpearmanR2")
 logger.setLevel(logging.INFO)
-formatter = logging.Formatter("%(levelname)s %(lineno)s IterativeMCMWithGuaranteedSpearmanR2: %(message)s")
+formatter = logging.Formatter("%(levelname)s %(lineno)s %(name)s: %(message)s")
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(formatter)
 logger.addHandler(handler)

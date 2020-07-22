@@ -23,7 +23,7 @@ from turbo_mc.models.matrix_completion_model import MatrixCompletionModel
 # Logger for KFoldCVMatrixCompletionModel
 logger = logging.getLogger(__name__ + ".KFoldCVMatrixCompletionModel")
 logger.setLevel(logging.INFO)
-formatter = logging.Formatter("%(levelname)s %(lineno)s KFoldCVMatrixCompletionModel: %(message)s")
+formatter = logging.Formatter("%(levelname)s %(lineno)s %(name)s: %(message)s")
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(formatter)
 logger.addHandler(handler)
@@ -32,7 +32,7 @@ logger = None
 # Logger for TrainValSplitCVMatrixCompletionModel
 logger = logging.getLogger(__name__ + ".TrainValSplitCVMatrixCompletionModel")
 logger.setLevel(logging.INFO)
-formatter = logging.Formatter("%(levelname)s %(lineno)s CVMatrixCompletionModel: %(message)s")
+formatter = logging.Formatter("%(levelname)s %(lineno)s %(name)s: %(message)s")
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(formatter)
 logger.addHandler(handler)
