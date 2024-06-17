@@ -13,8 +13,9 @@ setup(
     install_requires=[
         'coverage',
         'cython',
-        'scikit-surprise @ git+https://github.com/sprillo/Surprise.git'
-        '@deeeaf889f6e24643753cd935fbae0f612771b6e#egg=scikit-surprise',
+        #'scikit-surprise @ git+https://github.com/sprillo/Surprise.git'
+        #'@deeeaf889f6e24643753cd935fbae0f612771b6e#egg=scikit-surprise',
+        'scikit-surprise',
         'matplotlib',
         'numpy',
         'pandas',
@@ -22,5 +23,5 @@ setup(
         'pytest-cov',
         'seaborn',
         'scipy',
-        'sklearn'],
+        'scikit-learn'],
 )

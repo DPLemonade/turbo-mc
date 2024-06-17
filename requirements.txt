@@ -8,4 +8,4 @@ pytest
 pytest-cov
 seaborn
 scipy
-sklearn
+scikit-learn
